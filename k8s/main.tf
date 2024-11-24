@@ -36,11 +36,21 @@ resource "kubernetes_deployment" "backend" {
         container {
           image = "nowatorski-backend:latest"
           name  = "backend"
-          image_pull_policy = "Never"  # Dodajemy tę linię
+          image_pull_policy = "Never"
 
           port {
             container_port = 8000
           }
+
+          resources {
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+            requests = {
+              cpu    = "200m"
+              memory = "256Mi"
+            }
         }
       }
     }
@@ -85,6 +95,47 @@ resource "kubernetes_ingress_v1" "backend" {
                 number = 80
               }
             }
+          }
+        }
+      }
+    }
+  }
+}
+
+# CronJob
+
+resource "kubernetes_cron_job_v1" "cleanup" {
+  metadata {
+    name = "cleanup-job"
+  }
+  spec {
+    schedule = "0 0 * * *"  # Codziennie o północy
+    job_template {
+      metadata {
+        name = "cleanup-job-template"
+      }
+      spec {
+        template {
+          metadata {
+            name = "cleanup-job-template"
+          }
+          spec {
+            container {
+              name    = "cleanup"
+              image   = "nowatorski-backend:latest"
+              command = ["python", "cleanup.py"]
+              resources {
+                limits = {
+                  cpu    = "200m"
+                  memory = "256Mi"
+                }
+                requests = {
+                  cpu    = "100m"
+                  memory = "128Mi"
+                }
+              }
+            }
+            restart_policy = "OnFailure"
           }
         }
       }
