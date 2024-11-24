@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 
-redis_host = os.getenv("REDIS_HOST", "localhost")
+redis_host = os.getenv("REDIS_HOST", "redis")
 redis_password = os.getenv("REDIS_PASSWORD", "")
 
 redis_client = Redis(host=redis_host, password=redis_password, decode_responses=True)
