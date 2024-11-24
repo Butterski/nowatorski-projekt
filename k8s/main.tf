@@ -10,10 +10,60 @@ provider "kubernetes" {
   config_path = "~/.kube/config"
 }
 
-# Deployment
+# Namespaces
+resource "kubernetes_namespace" "backend" {
+  metadata {
+    name = "backend"
+  }
+}
+
+resource "kubernetes_namespace" "redis" {
+  metadata {
+    name = "redis"
+  }
+}
+
+# ConfigMap
+resource "kubernetes_config_map" "app_config" {
+  metadata {
+    name      = "app-config"
+    namespace = kubernetes_namespace.backend.metadata[0].name
+  }
+
+  data = {
+    CLEANUP_DAYS = "30"
+    APP_VERSION  = "1.0"
+    REDIS_PORT   = "6379"
+  }
+}
+
+# Secret
+resource "kubernetes_secret" "redis_secret" {
+  metadata {
+    name      = "redis-secret"
+    namespace = kubernetes_namespace.backend.metadata[0].name
+  }
+
+  data = {
+    redis_password = "bW9qZV90YWpuZV9oYXNsbw==" # base64 encoded "moje_tajne_haslo"
+  }
+}
+resource "kubernetes_secret" "redis_secret_redis_ns" {
+  metadata {
+    name      = "redis-secret"
+    namespace = kubernetes_namespace.redis.metadata[0].name
+  }
+
+  data = {
+    redis_password = "bW9qZV90YWpuZV9oYXNsbw==" # to samo hasło co w poprzednim sekrecie
+  }
+}
+
+# Backend Deployment
 resource "kubernetes_deployment" "backend" {
   metadata {
-    name = "backend-deployment"
+    name      = "backend-deployment"
+    namespace = kubernetes_namespace.backend.metadata[0].name
   }
 
   spec {
@@ -34,8 +84,8 @@ resource "kubernetes_deployment" "backend" {
 
       spec {
         container {
-          image = "nowatorski-backend:latest"
-          name  = "backend"
+          image             = "nowatorski-backend:latest"
+          name              = "backend"
           image_pull_policy = "Never"
 
           port {
@@ -43,8 +93,24 @@ resource "kubernetes_deployment" "backend" {
           }
 
           env {
+            name = "REDIS_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.redis_secret.metadata[0].name
+                key  = "redis_password"
+              }
+            }
+          }
+
+          env {
             name  = "REDIS_HOST"
-            value = "redis"
+            value = "redis.${kubernetes_namespace.redis.metadata[0].name}.svc.cluster.local"
+          }
+
+          env_from {
+            config_map_ref {
+              name = kubernetes_config_map.app_config.metadata[0].name
+            }
           }
 
           resources {
@@ -63,10 +129,11 @@ resource "kubernetes_deployment" "backend" {
   }
 }
 
-# Service
+# Backend Service
 resource "kubernetes_service" "backend" {
   metadata {
-    name = "backend-service"
+    name      = "backend-service"
+    namespace = kubernetes_namespace.backend.metadata[0].name
   }
 
   spec {
@@ -83,17 +150,18 @@ resource "kubernetes_service" "backend" {
   }
 }
 
-# Ingress
+# Backend Ingress
 resource "kubernetes_ingress_v1" "backend" {
   metadata {
-    name = "backend-ingress"
+    name      = "backend-ingress"
+    namespace = kubernetes_namespace.backend.metadata[0].name
   }
 
   spec {
     rule {
       http {
         path {
-          path = "/api"
+          path      = "/api"
           path_type = "Prefix"
           backend {
             service {
@@ -109,13 +177,14 @@ resource "kubernetes_ingress_v1" "backend" {
   }
 }
 
-# CronJob
+# Cleanup CronJob
 resource "kubernetes_cron_job_v1" "cleanup" {
   metadata {
-    name = "cleanup-job"
+    name      = "cleanup-job"
+    namespace = kubernetes_namespace.backend.metadata[0].name
   }
   spec {
-    schedule = "0 0 * * *"  # Codziennie o północy
+    schedule = "0 0 * * *" # Codziennie o północy
     job_template {
       metadata {
         name = "cleanup-job-template"
@@ -130,6 +199,22 @@ resource "kubernetes_cron_job_v1" "cleanup" {
               name    = "cleanup"
               image   = "nowatorski-backend:latest"
               command = ["python", "cleanup.py"]
+
+              env {
+                name = "REDIS_PASSWORD"
+                value_from {
+                  secret_key_ref {
+                    name = kubernetes_secret.redis_secret.metadata[0].name
+                    key  = "redis_password"
+                  }
+                }
+              }
+
+              env {
+                name  = "REDIS_HOST"
+                value = "redis.${kubernetes_namespace.redis.metadata[0].name}.svc.cluster.local"
+              }
+
               resources {
                 limits = {
                   cpu    = "200m"
@@ -152,17 +237,22 @@ resource "kubernetes_cron_job_v1" "cleanup" {
 # Redis StatefulSet
 resource "kubernetes_stateful_set" "redis" {
   metadata {
-    name = "redis"
+    name      = "redis"
+    namespace = kubernetes_namespace.redis.metadata[0].name
   }
 
   spec {
     service_name = "redis"
-    replicas = 1
+    replicas     = 1
 
     selector {
       match_labels = {
         app = "redis"
       }
+    }
+
+    update_strategy {
+      type = "RollingUpdate"
     }
 
     template {
@@ -180,16 +270,83 @@ resource "kubernetes_stateful_set" "redis" {
           port {
             container_port = 6379
           }
+
+          command = ["redis-server"]
+          args = ["--requirepass", "$(REDIS_PASSWORD)"]
+
+          env {
+            name = "REDIS_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.redis_secret_redis_ns.metadata[0].name
+                key  = "redis_password"
+              }
+            }
+          }
+
+          volume_mount {
+            name       = "redis-data"
+            mount_path = "/data"
+          }
+
+          resources {
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+            requests = {
+              cpu    = "200m"
+              memory = "256Mi"
+            }
+          }
+
+          liveness_probe {
+            tcp_socket {
+              port = 6379
+            }
+            initial_delay_seconds = 15
+            period_seconds        = 20
+          }
+
+          readiness_probe {
+            tcp_socket {
+              port = 6379
+            }
+            initial_delay_seconds = 5
+            period_seconds        = 10
+          }
+        }
+      }
+    }
+    volume_claim_template {
+      metadata {
+        name = "redis-data"
+      }
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
         }
       }
     }
   }
+
+  timeouts {
+    create = "10m"
+    update = "10m"
+    delete = "10m"
+  }
+
+  wait_for_rollout = true
 }
 
 # Redis Service
 resource "kubernetes_service" "redis" {
   metadata {
-    name = "redis"
+    name      = "redis"
+    namespace = kubernetes_namespace.redis.metadata[0].name
   }
 
   spec {

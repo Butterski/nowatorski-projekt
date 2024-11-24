@@ -18,8 +18,37 @@ app.add_middleware(
 
 redis_host = os.getenv("REDIS_HOST", "redis")
 redis_password = os.getenv("REDIS_PASSWORD", "")
+redis_port = int(os.getenv("REDIS_PORT", "6379"))
+app_version = os.getenv("APP_VERSION", "1.0")
+app_grade = os.getenv("APP_GRADE", "4.0")
 
-redis_client = Redis(host=redis_host, password=redis_password, decode_responses=True)
+redis_client = Redis(
+    host=redis_host, port=redis_port, password=redis_password, decode_responses=True
+)
+
+
+@app.get("/api")
+async def api_root():
+    return {"message": "API is working!"}
+
+
+@app.get("/api/health")
+async def health_check():
+    try:
+        redis_client.ping()
+        return {"status": "healthy", "redis": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+
+
+@app.get("/api/version")
+async def get_version():
+    return {"version": app_version}
+
+
+@app.get("/api/grade")
+async def get_grade():
+    return {"grade": app_grade}
 
 
 @app.get("/api/count/{url}")
