@@ -42,6 +42,11 @@ resource "kubernetes_deployment" "backend" {
             container_port = 8000
           }
 
+          env {
+            name  = "REDIS_HOST"
+            value = "redis"
+          }
+
           resources {
             limits = {
               cpu    = "500m"
@@ -51,11 +56,13 @@ resource "kubernetes_deployment" "backend" {
               cpu    = "200m"
               memory = "256Mi"
             }
+          }
         }
       }
     }
   }
 }
+
 # Service
 resource "kubernetes_service" "backend" {
   metadata {
@@ -103,7 +110,6 @@ resource "kubernetes_ingress_v1" "backend" {
 }
 
 # CronJob
-
 resource "kubernetes_cron_job_v1" "cleanup" {
   metadata {
     name = "cleanup-job"
@@ -140,5 +146,62 @@ resource "kubernetes_cron_job_v1" "cleanup" {
         }
       }
     }
+  }
+}
+
+# Redis StatefulSet
+resource "kubernetes_stateful_set" "redis" {
+  metadata {
+    name = "redis"
+  }
+
+  spec {
+    service_name = "redis"
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "redis"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "redis"
+        }
+      }
+
+      spec {
+        container {
+          name  = "redis"
+          image = "redis:latest"
+
+          port {
+            container_port = 6379
+          }
+        }
+      }
+    }
+  }
+}
+
+# Redis Service
+resource "kubernetes_service" "redis" {
+  metadata {
+    name = "redis"
+  }
+
+  spec {
+    selector = {
+      app = "redis"
+    }
+
+    port {
+      port        = 6379
+      target_port = 6379
+    }
+
+    cluster_ip = "None"
   }
 }
