@@ -36,6 +36,7 @@ resource "kubernetes_deployment" "backend" {
         container {
           image = "nowatorski-backend:latest"
           name  = "backend"
+          image_pull_policy = "Never"  # Dodajemy tę linię
 
           port {
             container_port = 8000
@@ -45,7 +46,6 @@ resource "kubernetes_deployment" "backend" {
     }
   }
 }
-
 # Service
 resource "kubernetes_service" "backend" {
   metadata {
