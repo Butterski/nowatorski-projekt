@@ -23,9 +23,9 @@ resource "kubernetes_deployment" "frontend" {
 
       spec {
         container {
-          image             = "nowatorski-frontend:latest"
+          image             = var.frontend_image
           name              = "frontend"
-          image_pull_policy = "Never"  # Ważne! To pozwoli użyć lokalnego obrazu
+          image_pull_policy = "Never"
 
           port {
             container_port = 80

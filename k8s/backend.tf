@@ -23,9 +23,9 @@ resource "kubernetes_deployment" "backend" {
 
       spec {
         container {
-          image             = "nowatorski-backend:latest"
+          image             = var.backend_image
           name              = "backend"
-          image_pull_policy = "Never"
+          image_pull_policy = "IfNotPresent"
 
           port {
             container_port = 8000
@@ -136,7 +136,7 @@ resource "kubernetes_cron_job_v1" "cleanup" {
           spec {
             container {
               name    = "cleanup"
-              image   = "nowatorski-backend:latest"
+              image   = var.backend_image
               command = ["python", "cleanup.py"]
 
               env {
