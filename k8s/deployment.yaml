@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
         - name: backend
-          image: nowatorski-backend:latest
+          image: ${var.backend_image}
           ports:
             - containerPort: 8000

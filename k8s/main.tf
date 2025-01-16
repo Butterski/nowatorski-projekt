@@ -3,6 +3,10 @@ terraform {
     kubernetes = {
       source = "hashicorp/kubernetes"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0.0"
+    }
   }
 }
 
@@ -21,4 +25,14 @@ resource "kubernetes_namespace" "redis" {
   metadata {
     name = "redis"
   }
+}
+
+variable "backend_image" {
+  description = "Backend image"
+  default     = "nowatorski-backend:latest"
+}
+
+variable "frontend_image" {
+  description = "Frontend image"
+  default     = "nowatorski-frontend:latest"
 }
