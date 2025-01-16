@@ -12,6 +12,18 @@ resource "kubernetes_config_map" "app_config" {
   }
 }
 
+resource "kubernetes_config_map" "frontend_config" {
+  metadata {
+    name      = "frontend-config"
+    namespace = kubernetes_namespace.frontend.metadata[0].name
+  }
+
+  data = {
+    REACT_APP_API_URL = "/api"
+    REACT_APP_ENV     = "production"
+  }
+}
+
 # Secret dla backend
 resource "kubernetes_secret" "redis_secret" {
   metadata {
