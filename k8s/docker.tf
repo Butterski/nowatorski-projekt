@@ -4,6 +4,9 @@ provider "docker" {
 
   # windows
   host = "npipe:////.//pipe//docker_engine"
+  registry_auth {
+    address = "registry.hub.docker.com"
+  }
 }
 
 resource "docker_image" "backend" {
