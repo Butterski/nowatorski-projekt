@@ -42,3 +42,9 @@ variable "frontend_image" {
   description = "Frontend image"
   default     = "nowatorski-frontend:latest"
 }
+
+resource "null_resource" "start_minikube" {
+  provisioner "local-exec" {
+    command = "minikube start"
+  }
+}
