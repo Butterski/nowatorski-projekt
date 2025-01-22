@@ -1,47 +1,140 @@
-<projekt>
-Celem projektu będzie zbudowanie środowiska, które uruchomi aplikacje w środowisku Kubernetes, w tym
-celu zostaną wykorzystane następujące narzędzia:
- - Docker - w celu zbudowania przynajmniej jednego obrazu samodzielnie, potrzebnego w projekcie
- - Terraform - w celu zarządzania infrastrukturą jako kod oraz uruchomieniem całego projektu
- - MiniKube/KinD - jako środowisko uruchomieniowe Kubernetes
- - Helm - sposób na tworzenie oraz wydawanie “paczek” w środowisku Kubernets
- 
-# Wymagania na ocenę 3.0 
- - Infrastruktura opisana w Terraformie
- - Aplikacja bez problemu uruchamia się poprzez wykonanie komendy: terraform apply
- - Minimalnie jeden obraz Docker zbudowany samemu
- - Na środoiwsku musi zostać wdrożona aplikacja wykorzystująca: Deployment / Pod / StatefulSet
- - Przynajmniej jedna aplikacja powinna wystawiać API lub apliakcję webową przy pomocy Ingress
+# Kubernetes Application Project
 
-# Wymagania na ocenę 3.5
- - Obraz dockerowy powinien być obrazem typu multi stage co za tym idzie musi składać się minimalnie z osobnego etapu budowania i osobnego środowiska uruchomienowego
- - Na środowisku musi zostać wdrożony przynajmniej jeden CronJob lub Job
- - Aplikacja musi mieć określone resources dla każdego kontenera 
+## Overview
+This project demonstrates a multi-tier application deployment in Kubernetes using Terraform for infrastructure management. The application consists of a React frontend, FastAPI backend, and Redis database, all containerized and orchestrated in a Kubernetes environment.
 
-# Wymagania na ocenę 4.0
- - wszystko co na ocenę 3.5
- - Aplikacja powinna pobierać zmienna środowiskową z Secret
- - Na środowisku Kubernetes muszą być wdrożone aplikacje typu: StatefulSet oraz Deployment
- - Aplikacje muszą być umieszczone w różnych namespace
- - Aplikacje muszą komunikować się ze soba wewnętrznie
- - Konfiguracja aplikacji powinna być brana z ConfigMap
+## Prerequisites
+- Docker
+- Kubernetes (Minikube or similar)
+- Terraform
+- kubectl
+- Node.js (for local development)
+- Python 3.9+
 
-# Wymagania na ocenę 4.5
- - Wszystko co na ocenę 4.0
- - Ingress musi mieć wystawiony certyfikat i serwować ruch przez HTTPS
- - Aplikacja typu StatefulSet musi używać PersistentVolume oraz PersistenVolumeClaim
- - Komenda terraform destroy powinna wykonywać się bez błędów w skończonym czasie
- - Przynajmniej jeden Helm Chart musi zostać wdrożony na środowisko przy pomocy Terraforma
- - Część zasobów musi być inicjalizowania w Terraform jako module
+## Project Structure
+```
+└── butterski-terraform-train/
+    ├── k8s/               # Terraform and Kubernetes configurations
+    ├── nowatorski_backend/# Python FastAPI backend
+    └── nowatorski_front/  # React frontend
+```
 
-# Wymagania na ocenę 5.0
- - Wszystko co na ocenę 4.5
- - W pliku Terraform musi zostać zastosowany przynajmniej jeden konstrukt typu: for_each / count
- - zarówno w kontekście resource jak i w środku resource jako dynamic
- - Terraform musi wdrożyć samemu napisany Helm Chart składający się przynajmniej z 5 manifestów i
- - umożliwiający konfigurację go poprzez values
- - Przynajmniej jeden workload ( Deployment / StatefulSet ) mus się składać z initContainer oraz
- - minimalnie dwóch kontenerów w podzie
- - Przynajmniej jedna aplikacja musi się skalować przy pomocy HorizontalPodAutoscaler
-</projekt>
+## Components
+### Frontend
+- React.js application
+- Displays visit statistics
+- Auto-refreshing data every 5 seconds
+- Multi-stage Docker build with Nginx
 
+### Backend
+- FastAPI (Python)
+- RESTful API endpoints
+- Redis integration
+- Multi-stage Docker build
+
+### Database
+- Redis StatefulSet
+- Persistent storage
+- Password protection
+
+## API Endpoints
+- `GET /api` - API health check
+- `GET /api/health` - System health status
+- `GET /api/version` - Application version
+- `GET /api/grade` - Application grade
+- `GET /api/count/{url}` - URL visit counter
+- `GET /api/stats` - All visit statistics
+
+## Deployment
+
+### 1. Start Minikube
+```bash
+minikube start
+```
+
+### 2. Initialize Terraform
+```bash
+cd k8s
+terraform init
+```
+
+### 3. Deploy the Application
+```bash
+terraform apply
+```
+
+### 4. Access the Application
+```bash
+minikube tunnel
+```
+Access the application at `http://localhost`
+
+## Configuration
+The application can be configured through:
+- Kubernetes ConfigMaps
+- Kubernetes Secrets
+- Environment variables
+
+## Development
+
+### Backend Development
+```bash
+cd nowatorski_backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+### Frontend Development
+```bash
+cd nowatorski_front
+npm install
+npm start
+```
+
+## Features
+- Multi-stage Docker builds
+- Kubernetes namespace isolation
+- Automatic cleanup jobs
+- Resource management
+- Service communication
+- Persistent storage
+- Health monitoring
+
+## Cleanup
+To remove all resources:
+```bash
+terraform destroy
+```
+
+## Architecture
+```
+Frontend (React) -> Ingress -> Backend (FastAPI) -> Redis
+```
+
+## Security
+- Namespace isolation
+- Secret management
+- Resource limitations
+- Internal service communication
+
+## Contributing
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+[MIT License](LICENSE)
+
+## Author
+Miłosz Kucharski
+
+## Acknowledgments
+- FastAPI
+- React
+- Terraform
+- Kubernetes
+- Redis
+
+For more detailed information about specific components, please refer to the documentation in respective directories.
