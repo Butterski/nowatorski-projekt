@@ -10,6 +10,25 @@ terraform {
   }
 }
 
+
+# will not work on windows!
+# provider "minikube" {
+#   kubernetes_version = "v1.31.1"
+# }
+
+# resource "minikube_cluster" "docker" {
+#   driver       = "docker"
+#   cluster_name = "npi-cluster"
+#   cni          = "bridge"
+#   addons = [
+#     "default-storageclass",
+#     "storage-provisioner",
+#     "ingress",
+#     "ingress-dns",
+#     "dashboard"
+#   ]
+# }
+
 provider "kubernetes" {
   config_path = "~/.kube/config"
 }
